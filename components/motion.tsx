@@ -1,12 +1,12 @@
 "use client";
 
 import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function Reveal({
   children,
   className = "",
-  delay = 0
+  delay = 0,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -17,29 +17,62 @@ export function Reveal({
       className={className}
       initial={{ opacity: 0, y: 22 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1], delay }}
+      viewport={{
+        once: true,
+        amount: 0.25,
+      }}
+      transition={{
+        duration: 0.65,
+        ease: [0.22, 1, 0.36, 1],
+        delay,
+      }}
     >
       {children}
     </motion.div>
   );
 }
 
-export function AnimatedStat({ value, suffix }: { value: number; suffix: string }) {
+export function AnimatedStat({
+  value,
+  suffix,
+}: {
+  value: number;
+  suffix: string;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
+  const [displayValue, setDisplayValue] = useState(0);
+
+  const inView = useInView(ref, {
+    once: true,
+    amount: 0.2,
+  });
+
   const motionValue = useMotionValue(0);
-  const spring = useSpring(motionValue, { duration: 1400, bounce: 0 });
+
+  const spring = useSpring(motionValue, {
+    stiffness: 80,
+    damping: 20,
+    mass: 0.8,
+  });
 
   useEffect(() => {
-    if (inView) motionValue.set(value);
-  }, [inView, motionValue, value]);
+    if (inView) {
+      motionValue.set(value);
+    }
+  }, [inView, value, motionValue]);
 
   useEffect(() => {
-    return spring.on("change", (latest) => {
-      if (ref.current) ref.current.textContent = `${Math.round(latest)}${suffix}`;
+    const unsubscribe = spring.on("change", (latest) => {
+      setDisplayValue(Math.round(latest));
     });
-  }, [spring, suffix]);
 
-  return <span ref={ref}>0{suffix}</span>;
+    return unsubscribe;
+  }, [spring]);
+
+  return (
+    <span ref={ref}>
+      {displayValue}
+      {suffix}
+    </span>
+  );
 }
